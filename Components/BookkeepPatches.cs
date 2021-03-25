@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
 
-namespace UnityParrot.Components
+namespace UnityParrotLite.Components
 {
     public class BookkeepPatches
     {

@@ -10,7 +10,7 @@ using System.Text;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-namespace UnityParrot
+namespace UnityParrotLite
 {
     public enum PatchType
     {
@@ -25,7 +25,15 @@ namespace UnityParrot
         public Type TargetType;
         public string TargetMethod;
         public PatchType PatchType;
+        public Type[] ParameterTypes = Type.EmptyTypes;
 
+        public MethodPatchAttribute(PatchType patchType, Type targetType, string targetMethod, Type[] parameterTypes)
+        {
+            PatchType = patchType;
+            TargetType = targetType;
+            TargetMethod = targetMethod;
+            ParameterTypes = parameterTypes;
+        }
         public MethodPatchAttribute(PatchType patchType, Type targetType, string targetMethod)
         {
             PatchType = patchType;
@@ -42,7 +50,7 @@ namespace UnityParrot
             => ms_harmony;
 
         public static HarmonyMethod GetPatch(string name, Type type, BindingFlags flags = BindingFlags.Static | BindingFlags.NonPublic)
-                => new HarmonyMethod(type.GetMethod(name, flags) 
+                => new HarmonyMethod(type.GetMethod(name, flags)
                     ?? type.GetProperties().FirstOrDefault((PropertyInfo p) => p.GetGetMethod().Name == name)?.GetGetMethod());
 
 
@@ -62,8 +70,21 @@ namespace UnityParrot
 
                         HarmonyMethod harmonyMethod = GetPatch(m.Name, targetType);
 
-                        PerformPatch($"{targetType.Name} # {a.TargetMethod} ({m.Name})",
-                            a.TargetType.GetMethod(a.TargetMethod, (BindingFlags)62),
+                        MethodBase method;
+                        if (a.TargetMethod == null)
+                        { 
+                            method = a.TargetType.GetConstructor((BindingFlags)62, null, a.ParameterTypes, null);
+                        }
+                        else
+                        {
+                            method = a.ParameterTypes == Type.EmptyTypes
+                                ? a.TargetType.GetMethod(a.TargetMethod, (BindingFlags)62)
+                                : a.TargetType.GetMethod(a.TargetMethod, (BindingFlags)62, null, a.ParameterTypes, null);
+                        }
+                        
+
+                        PerformPatch($"{targetType.Name} # {a.TargetMethod ?? ".ctor"} ({m.Name})",
+                            method,
                             a.PatchType == PatchType.Prefix ? harmonyMethod : null,
                             a.PatchType == PatchType.Postfix ? harmonyMethod : null,
                             a.PatchType == PatchType.Transpiler ? harmonyMethod : null);
